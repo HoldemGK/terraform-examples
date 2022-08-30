@@ -1,25 +1,33 @@
-node {
+pipeline {
+    agent any
+    stages {
     stage('Clone') { // for display purposes
         // Clone the configurations repository
-        cleanWs()
-        git 'https://github.com/HoldemGK/terraform-examples.git'   
+        steps {
+          cleanWs()
+          git 'https://github.com/HoldemGK/terraform-examples.git' 
+        }  
     }
     stage('Download') {
         // Download Terraform
-        sh label: '', script: 'curl https://releases.hashicorp.com/terraform/1.2.8/terraform_1.2.8_linux_amd64.zip \
+        steps {
+          sh label: '', script: 'curl https://releases.hashicorp.com/terraform/1.2.8/terraform_1.2.8_linux_amd64.zip \
             --output terraform_1.2.8_darwin_amd64.zip \
-             && unzip terraform_1.2.8_darwin_amd64.zip'
+            && unzip terraform_1.2.8_darwin_amd64.zip'
+        }
     }
     stage('Backend-Init') {
         // Initialize the Terraform configuration
-        dir('03_01_remotestate/remote_resources') {
-            sh script: '../../terraform init -input=false'
+        steps {
+          dir('03_01_remotestate/remote_resources') {
+          sh script: '../../terraform init -input=false'
+          }
         }
-        
     }
     stage('Backend-Plan') {
         // Create Terraform plan for backend resources
-        withCredentials([string(credentialsId: 'AWS_ACCESS_KEY', variable: 'aws_access_key'), 
+        steps {
+          withCredentials([string(credentialsId: 'AWS_ACCESS_KEY', variable: 'aws_access_key'), 
                         string(credentialsId: 'AWS_SECRET_KEY', variable: 'aws_secret_key')]) {
             dir('03_01_remotestate/remote_resources') {
                 sh script: '../../terraform plan \
@@ -28,17 +36,21 @@ node {
                         -var="aws_secret_key=$aws_secret_key"'
             }
         }
+        }
     }
     stage('Backend-Apply') {
-        withCredentials([string(credentialsId: 'AWS_ACCESS_KEY', variable: 'aws_access_key'), 
+        steps {
+          withCredentials([string(credentialsId: 'AWS_ACCESS_KEY', variable: 'aws_access_key'), 
                         string(credentialsId: 'AWS_SECRET_KEY', variable: 'aws_secret_key')]) {
                             dir('03_01_remotestate/remote_resources') {
                                 sh script: '../../terraform apply backend.tfplan'
                             }
         }
+        }
     }
     stage('Config-Init') {
-        withCredentials([string(credentialsId: 'AWS_ACCESS_KEY', variable: 'aws_access_key'), 
+        steps {
+          withCredentials([string(credentialsId: 'AWS_ACCESS_KEY', variable: 'aws_access_key'), 
                         string(credentialsId: 'AWS_SECRET_KEY', variable: 'aws_secret_key')]) {
                             dir('03_01_remotestate') {
                                 sh script: '../terraform init \
@@ -50,10 +62,12 @@ node {
                                             -backend-config="secret_key=$aws_secret_key"'
                             }
                         }
+        }
     }
     stage('Config-Plan') {
         // Generate Terraform plan
-        withCredentials([string(credentialsId: 'AWS_ACCESS_KEY', variable: 'aws_access_key'), 
+        steps {
+          withCredentials([string(credentialsId: 'AWS_ACCESS_KEY', variable: 'aws_access_key'), 
                         string(credentialsId: 'AWS_SECRET_KEY', variable: 'aws_secret_key')]) {
                             dir('03_01_remotestate') {
                                 sh script: '../terraform plan \
@@ -62,19 +76,23 @@ node {
                                             -var="aws_secret_key=$aws_secret_key"'
                             }
         }
+        }
     }
     stage('Config-Apply') {
         // Apply the configuration
-        withCredentials([string(credentialsId: 'AWS_ACCESS_KEY', variable: 'aws_access_key'), 
+        steps {
+          withCredentials([string(credentialsId: 'AWS_ACCESS_KEY', variable: 'aws_access_key'), 
                         string(credentialsId: 'AWS_SECRET_KEY', variable: 'aws_secret_key')]) {
                             dir('03_01_remotestate') {
                                 sh script: '../terraform apply s1.tfplan'
                             }
         }
+        }
     }
     stage('Destroy'){
-        input 'Destroy?'
-        withCredentials([string(credentialsId: 'AWS_ACCESS_KEY', variable: 'aws_access_key'), 
+        steps {
+          input 'Destroy?'
+          withCredentials([string(credentialsId: 'AWS_ACCESS_KEY', variable: 'aws_access_key'), 
                         string(credentialsId: 'AWS_SECRET_KEY', variable: 'aws_secret_key')]) {
             dir('03_01_remotestate') {
                 sh script: '../terraform destroy \
@@ -89,5 +107,7 @@ node {
                         -var="aws_secret_key=$aws_secret_key"'
             }
         }
+        }
     }
+}
 }
