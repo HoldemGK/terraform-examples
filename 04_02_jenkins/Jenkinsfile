@@ -23,7 +23,7 @@ pipeline {
           sh script: '../../terraform init -input=false'
           }
         }
-    }
+    }/*
     stage('Backend-Plan') {
         // Create Terraform plan for backend resources
         steps {
@@ -47,7 +47,7 @@ pipeline {
                             }
         }
         }
-    }
+    }*/
     stage('Config-Init') {
         steps {
           withCredentials([string(credentialsId: 'AWS_ACCESS_KEY', variable: 'aws_access_key'), 
